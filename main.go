@@ -40,6 +40,12 @@ func main() {
 	db, err := sql.Open("mysql", mysqlConfig.FormatDSN())
 	panicOnError(err)
 
+	_, err = db.ExecContext(
+		context.Background(),
+		"CREATE TABLE IF NOT EXISTS `users` (`traq_id` VARCHAR(36) NOT NULL, `github_id` VARCHAR(39) NOT NULL, PRIMARY KEY (`traq_id`))",
+	)
+	panicOnError(err)
+
 	bot.OnMessageCreated(func(p *payload.MessageCreated) {
 		// ex: /register <traQ ID> <GitHub ID>
 		if strings.HasPrefix(p.Message.PlainText, "/register") {
