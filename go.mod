@@ -4,6 +4,7 @@ go 1.21.3
 
 require (
 	github.com/go-sql-driver/mysql v1.7.1
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/traPtitech/go-traq v0.0.0-20220426061605-adc15dcfc6d0
 	github.com/traPtitech/traq-ws-bot v1.1.2
 )

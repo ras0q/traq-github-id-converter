@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/robfig/cron/v3"
 	"github.com/traPtitech/go-traq"
 	traqwsbot "github.com/traPtitech/traq-ws-bot"
 	"github.com/traPtitech/traq-ws-bot/payload"
@@ -24,6 +25,7 @@ var (
 		AllowNativePasswords: true,
 		ParseTime:            true,
 	}
+	idMap = map[string]string{} // GitHub ID -> traQ ID
 )
 
 func main() {
@@ -69,10 +71,44 @@ func main() {
 			}
 
 			mustPostMessage(ctx, bot, "Registered!", p.Message.ChannelID)
+			return
 		}
 
-		mustPostMessage(ctx, bot, "@Ras", p.Message.ChannelID)
+		containedIDs := make([]string, 0, len(idMap))
+		for gid, tid := range idMap {
+			if strings.Contains(p.Message.PlainText, gid) {
+				containedIDs = append(containedIDs, "@"+tid)
+			}
+		}
+
+		mustPostMessage(ctx, bot, strings.Join(containedIDs, " "), p.Message.ChannelID)
 	})
+
+	c := cron.New()
+	_, err = c.AddFunc("0 0 * * *", func() {
+		ctx := context.Background()
+
+		rows, err := db.QueryContext(ctx, "SELECT `traq_id`, `github_id` FROM `users`")
+		if err != nil {
+			log.Println("Failed to get users:", err)
+			return
+		}
+		defer rows.Close()
+
+		idMap = map[string]string{}
+		for rows.Next() {
+			var tid, gid string
+			err := rows.Scan(&tid, &gid)
+			if err != nil {
+				log.Println("Failed to scan row:", err)
+				return
+			}
+			idMap[gid] = tid
+		}
+	})
+	panicOnError(err)
+
+	c.Start()
 
 	panicOnError(bot.Start())
 }
