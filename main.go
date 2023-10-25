@@ -40,6 +40,11 @@ func main() {
 
 	db, err := sql.Open("mysql", mysqlConfig.FormatDSN())
 	panicOnError(err)
+	defer db.Close()
+
+	_idMap, err := loadIDMap(context.Background(), db)
+	panicOnError(err)
+	idMap = _idMap
 
 	_, err = db.ExecContext(
 		context.Background(),
@@ -87,24 +92,9 @@ func main() {
 	c := cron.New()
 	_, err = c.AddFunc("0 0 * * *", func() {
 		ctx := context.Background()
-
-		rows, err := db.QueryContext(ctx, "SELECT `traq_id`, `github_id` FROM `users`")
-		if err != nil {
-			log.Println("Failed to get users:", err)
-			return
-		}
-		defer rows.Close()
-
-		idMap = map[string]string{}
-		for rows.Next() {
-			var tid, gid string
-			err := rows.Scan(&tid, &gid)
-			if err != nil {
-				log.Println("Failed to scan row:", err)
-				return
-			}
-			idMap[gid] = tid
-		}
+		_idMap, err := loadIDMap(ctx, db)
+		panicOnError(err)
+		idMap = _idMap
 	})
 	panicOnError(err)
 
@@ -127,6 +117,26 @@ func mustPostMessage(ctx context.Context, bot *traqwsbot.Bot, content string, ch
 	if err != nil {
 		log.Println("Failed to post message:", err)
 	}
+}
+
+func loadIDMap(ctx context.Context, db *sql.DB) (map[string]string, error) {
+	rows, err := db.QueryContext(ctx, "SELECT `traq_id`, `github_id` FROM `users`")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	idMap := map[string]string{}
+	for rows.Next() {
+		var tid, gid string
+		err := rows.Scan(&tid, &gid)
+		if err != nil {
+			return nil, err
+		}
+		idMap[gid] = tid
+	}
+
+	return idMap, nil
 }
 
 func panicOnError(err error) {
