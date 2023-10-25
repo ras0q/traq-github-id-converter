@@ -14,7 +14,6 @@ import (
 )
 
 var (
-	channelID   = os.Getenv("TRAQ_CHANNEL_ID")
 	accessToken = os.Getenv("TRAQ_ACCESS_TOKEN")
 	mysqlConfig = mysql.Config{
 		User:                 os.Getenv("MYSQL_USER"),
@@ -51,7 +50,7 @@ func main() {
 		if strings.HasPrefix(p.Message.PlainText, "/register") {
 			args := strings.Split(p.Message.PlainText, " ")
 			if len(args) != 3 {
-				mustPostMessage(bot, "Usage: `/register <traQ ID> <GitHub ID>`")
+				mustPostMessage(bot, "Usage: `/register <traQ ID> <GitHub ID>`", p.Message.ChannelID)
 			}
 
 			traqID := args[1]
@@ -63,20 +62,20 @@ func main() {
 				traqID, githubID,
 			)
 			if err != nil {
-				mustPostMessage(bot, "Failed to register")
+				mustPostMessage(bot, "Failed to register", p.Message.ChannelID)
 				return
 			}
 
-			mustPostMessage(bot, "Registered!")
+			mustPostMessage(bot, "Registered!", p.Message.ChannelID)
 		}
 
-		mustPostMessage(bot, "@Ras")
+		mustPostMessage(bot, "@Ras", p.Message.ChannelID)
 	})
 
 	panicOnError(bot.Start())
 }
 
-func mustPostMessage(bot *traqwsbot.Bot, content string) {
+func mustPostMessage(bot *traqwsbot.Bot, content string, channelID string) {
 	embed := true
 
 	_, _, err := bot.API().
