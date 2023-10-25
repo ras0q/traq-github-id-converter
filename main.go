@@ -81,7 +81,7 @@ func main() {
 
 		containedIDs := make([]string, 0, len(idMap))
 		for gid, tid := range idMap {
-			if strings.Contains(p.Message.PlainText, gid) {
+			if strings.Contains(p.Message.PlainText, "https://github.com/"+gid) {
 				containedIDs = append(containedIDs, "@"+tid)
 			}
 		}
