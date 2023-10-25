@@ -59,7 +59,7 @@ func main() {
 
 			_, err := db.ExecContext(
 				context.Background(),
-				"INSERT INTO `users` (`traq_id`, `github_id`) VALUES (?, ?)",
+				"INSERT INTO `users` (`traq_id`, `github_id`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `github_id` = ?",
 				traqID, githubID,
 			)
 			if err != nil {
