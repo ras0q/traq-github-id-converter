@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"database/sql"
 	"log"
 	"os"
 	"strings"
 
+	"github.com/go-sql-driver/mysql"
 	"github.com/traPtitech/go-traq"
 	traqwsbot "github.com/traPtitech/traq-ws-bot"
 	"github.com/traPtitech/traq-ws-bot/payload"
@@ -15,6 +16,15 @@ import (
 var (
 	channelID   = os.Getenv("TRAQ_CHANNEL_ID")
 	accessToken = os.Getenv("TRAQ_ACCESS_TOKEN")
+	mysqlConfig = mysql.Config{
+		User:                 os.Getenv("MYSQL_USER"),
+		Passwd:               os.Getenv("MYSQL_PASSWORD"),
+		Net:                  "tcp",
+		Addr:                 os.Getenv("MYSQL_HOST") + ":" + os.Getenv("MYSQL_PORT"),
+		DBName:               os.Getenv("MYSQL_DATABASE"),
+		AllowNativePasswords: true,
+		ParseTime:            true,
+	}
 )
 
 func main() {
@@ -27,6 +37,9 @@ func main() {
 		log.Println("Received Error:", msg)
 	})
 
+	db, err := sql.Open("mysql", mysqlConfig.FormatDSN())
+	panicOnError(err)
+
 	bot.OnMessageCreated(func(p *payload.MessageCreated) {
 		// ex: /register <traQ ID> <GitHub ID>
 		if strings.HasPrefix(p.Message.PlainText, "/register") {
@@ -38,7 +51,15 @@ func main() {
 			traqID := args[1]
 			githubID := args[2]
 
-			fmt.Println(traqID, githubID) // TODO: register to DB
+			_, err := db.ExecContext(
+				context.Background(),
+				"INSERT INTO `users` (`traq_id`, `github_id`) VALUES (?, ?)",
+				traqID, githubID,
+			)
+			if err != nil {
+				mustPostMessage(bot, "Failed to register")
+				return
+			}
 
 			mustPostMessage(bot, "Registered!")
 		}
