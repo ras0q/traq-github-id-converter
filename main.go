@@ -45,6 +45,8 @@ func main() {
 
 		mustPostMessage(bot, "@Ras")
 	})
+
+	panicOnError(bot.Start())
 }
 
 func mustPostMessage(bot *traqwsbot.Bot, content string) {
