@@ -46,47 +46,51 @@ func main() {
 	panicOnError(err)
 
 	bot.OnMessageCreated(func(p *payload.MessageCreated) {
+		ctx := context.Background()
+
 		// ex: /register <traQ ID> <GitHub ID>
 		if strings.HasPrefix(p.Message.PlainText, "/register") {
 			args := strings.Split(p.Message.PlainText, " ")
 			if len(args) != 3 {
-				mustPostMessage(bot, "Usage: `/register <traQ ID> <GitHub ID>`", p.Message.ChannelID)
+				mustPostMessage(ctx, bot, "Usage: `/register <traQ ID> <GitHub ID>`", p.Message.ChannelID)
 			}
 
 			traqID := args[1]
 			githubID := args[2]
 
 			_, err := db.ExecContext(
-				context.Background(),
+				ctx,
 				"INSERT INTO `users` (`traq_id`, `github_id`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `github_id` = ?",
 				traqID, githubID,
 			)
 			if err != nil {
-				mustPostMessage(bot, "Failed to register", p.Message.ChannelID)
+				mustPostMessage(ctx, bot, "Failed to register", p.Message.ChannelID)
 				return
 			}
 
-			mustPostMessage(bot, "Registered!", p.Message.ChannelID)
+			mustPostMessage(ctx, bot, "Registered!", p.Message.ChannelID)
 		}
 
-		mustPostMessage(bot, "@Ras", p.Message.ChannelID)
+		mustPostMessage(ctx, bot, "@Ras", p.Message.ChannelID)
 	})
 
 	panicOnError(bot.Start())
 }
 
-func mustPostMessage(bot *traqwsbot.Bot, content string, channelID string) {
+func mustPostMessage(ctx context.Context, bot *traqwsbot.Bot, content string, channelID string) {
 	embed := true
 
 	_, _, err := bot.API().
 		MessageApi.
-		PostMessage(context.Background(), channelID).
+		PostMessage(ctx, channelID).
 		PostMessageRequest(traq.PostMessageRequest{
 			Content: content,
 			Embed:   &embed,
 		}).
 		Execute()
-	panicOnError(err)
+	if err != nil {
+		log.Println("Failed to post message:", err)
+	}
 }
 
 func panicOnError(err error) {
